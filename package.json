@@ -1,0 +1,26 @@
+{
+  "name": "connection-dot",
+  "version": "0.1.0",
+  "description": "Internet status in the GNOME top bar",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "tsc && python3 scripts/package.py",
+    "build:dev": "tsc --sourceMap && python3 scripts/package.py --dev",
+    "check": "tsc --noEmit",
+    "test": "tsc && node --test tests/*.test.mjs",
+    "pack": "npm run build",
+    "verify:package": "python3 scripts/verify.py",
+    "dev": "tsc --watch --sourceMap",
+    "install:dev": "npm run build:dev && gnome-extensions install --force artifacts/connection-dot-dev.shell-extension.zip",
+    "uninstall:dev": "gnome-extensions uninstall connection-dot-dev@derrick-nuby.github.io"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "private": true
+}
