@@ -1,0 +1,21 @@
+name: Verify
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+      - run: sudo apt-get update && sudo apt-get install -y gnome-shell gjs gir1.2-soup-3.0 libglib2.0-bin
+      - run: npm ci
+      - run: npm run check && npm test && npm run pack && npm run build:dev
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: extension-zips
+          path: artifacts/
+          retention-days: 14
