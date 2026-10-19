@@ -23,6 +23,7 @@ export default class ConnectionDot extends Extension {
     private signal = 0;
     private settingSignal = 0;
     private pending?: Gio.Cancellable;
+    private preferencesRequest?: Gio.Cancellable;
     private classifier = new Classifier();
     enable() {
         this.settings = this.getSettings();
@@ -36,7 +37,7 @@ export default class ConnectionDot extends Extension {
         this.refresh = new PopupMenu.PopupMenuItem('Check now');
         this.refresh.connect('activate',()=>void this.check());
         (this.button.menu as PopupMenu.PopupMenu).addMenuItem(this.refresh);
-        (this.button.menu as PopupMenu.PopupMenu).addAction('Settings',()=>this.openPreferences());
+        (this.button.menu as PopupMenu.PopupMenu).addAction('Settings',()=>this.showSettings());
         (this.button.menu as PopupMenu.PopupMenu).addAction('About Connection Dot',()=>Gio.AppInfo.launch_default_for_uri('https://github.com/derrick-nuby/connection-dot',null));
         Main.panel.addToStatusArea(this.uuid,this.button);
         this.signal = this.network.connect('network-changed',()=>this.restart());
@@ -45,6 +46,7 @@ export default class ConnectionDot extends Extension {
     }
     disable() {
         this.stop();
+        this.preferencesRequest?.cancel(); this.preferencesRequest=undefined;
         if(this.network && this.signal) this.network.disconnect(this.signal);
         if(this.settings && this.settingSignal) this.settings.disconnect(this.settingSignal);
         this.signal=this.settingSignal=0;
@@ -52,6 +54,30 @@ export default class ConnectionDot extends Extension {
         this.button?.destroy(); this.button=undefined; this.icon=undefined;
         this.detail=undefined; this.refresh=undefined; this.settings=undefined; this.network=undefined;
         this.classifier.reset();
+    }
+    private showSettings() {
+        if(this.preferencesRequest) return;
+        const request=new Gio.Cancellable();
+        this.preferencesRequest=request;
+        // Shell 50's openPreferences() drops the D-Bus promise. Finish this call
+        // explicitly so clicking Settings with a dialog open cannot reject unhandled.
+        Gio.DBus.session.call(
+            'org.gnome.Shell.Extensions', '/org/gnome/Shell/Extensions',
+            'org.gnome.Shell.Extensions', 'OpenExtensionPrefs',
+            new GLib.Variant('(ssa{sv})',[this.uuid,'',{}]),
+            null, Gio.DBusCallFlags.NONE, -1, request,
+            (connection,result)=>{
+                try { connection!.call_finish(result); }
+                catch(error) {
+                    if(!request.is_cancelled()) {
+                        const message=error instanceof Error ? error.message : String(error);
+                        if(!message.includes('Already showing a prefs dialog'))
+                            console.error('Connection Dot: could not open Settings:',message);
+                    }
+                } finally {
+                    if(this.preferencesRequest===request) this.preferencesRequest=undefined;
+                }
+            });
     }
     private stop() {
         if(this.timer) GLib.Source.remove(this.timer);
