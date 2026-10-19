@@ -3,3 +3,9 @@ dist/
 build/
 artifacts/
 *.log
+
+
+# Drafts
+
+**[Dd]raft**
+/drafts/
