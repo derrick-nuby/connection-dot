@@ -22,5 +22,37 @@
   "author": "",
   "license": "GPL-3.0-or-later",
   "type": "module",
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@girs/gjs": "^4.0.0-beta.34",
+    "@girs/gnome-shell": "^48.0.4",
+    "@girs/soup-3.0": "^5.5.0",
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2"
+  },
+  "overrides": {
+    "@girs/accountsservice-1.0": "1.0.0-4.0.0-beta.34",
+    "@girs/adw-1": "^1.8.0-4.0.0-beta.34",
+    "@girs/atk-1.0": "^2.56.3-4.0.0-beta.34",
+    "@girs/clutter-16": "^16.0.0-4.0.0-beta.34",
+    "@girs/cogl-2.0": "^2.0.0-4.0.0-beta.34",
+    "@girs/gcr-4": "^4.4.0-4.0.0-beta.34",
+    "@girs/gdm-1.0": "^1.0.0-4.0.0-beta.34",
+    "@girs/gio-2.0": "^2.84.4-4.0.0-beta.34",
+    "@girs/gjs": "^4.0.0-beta.34",
+    "@girs/glib-2.0": "^2.84.4-4.0.0-beta.34",
+    "@girs/gnomebg-4.0": "^4.0.0-4.0.0-beta.34",
+    "@girs/gnomebluetooth-3.0": "^3.0.0-4.0.0-beta.34",
+    "@girs/gnomedesktop-4.0": "^4.0.0-4.0.0-beta.34",
+    "@girs/gobject-2.0": "^2.84.4-4.0.0-beta.34",
+    "@girs/gtk-4.0": "^4.19.1-4.0.0-beta.34",
+    "@girs/gvc-1.0": "^1.0.0-4.0.0-beta.34",
+    "@girs/meta-16": "^16.0.0-4.0.0-beta.34",
+    "@girs/mtk-16": "^16.0.0-4.0.0-beta.34",
+    "@girs/polkit-1.0": "^1.0.0-4.0.0-beta.34",
+    "@girs/shell-16": "^16.0.0-4.0.0-beta.34",
+    "@girs/shew-0": "^0.0.0-4.0.0-beta.34",
+    "@girs/st-16": "^16.0.0-4.0.0-beta.34",
+    "@girs/upowerglib-1.0": "^0.99.1-4.0.0-beta.34"
+  }
 }
