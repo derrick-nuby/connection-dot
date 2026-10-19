@@ -1,10 +1,10 @@
 # Connection Dot
 
-A small GNOME top-bar indicator for internet responsiveness.
+A prominent 20-pixel status dot in the GNOME top bar for internet responsiveness.
 
 **Development preview — not yet qualified on GNOME 48–50 or published on GNOME Extensions.**
 
-Green means repeated successful, responsive checks; amber means slow or intermittent checks; red means offline with corroborating system evidence. Neutral means checking or unable to verify. Captive portals show “Sign-in required”. Click the indicator for endpoint results, response times, the last check, and preferences.
+Green means repeated successful, responsive checks; amber means slow or intermittent checks; red means offline with corroborating system evidence. Blue means checking or unable to verify. Captive portals show “Sign-in required”. Click the indicator for endpoint results, response times, the last check, and preferences.
 
 ## Privacy and limitations
 

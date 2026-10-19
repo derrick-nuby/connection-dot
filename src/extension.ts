@@ -1,4 +1,5 @@
 import St from 'gi://St';
+import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Soup from 'gi://Soup?version=3.0';
@@ -11,7 +12,7 @@ import {Classifier, type Network, type Result, type State} from './status.js';
 const labels: Record<State,string> = {checking:'Checking / unable to verify',connected:'Connected',poor:'Poor connection',offline:'Offline',portal:'Sign-in required'};
 export default class ConnectionDot extends Extension {
     private button?: PanelMenu.Button;
-    private icon?: St.Icon;
+    private icon?: St.Widget;
     private detail?: PopupMenu.PopupMenuItem;
     private refresh?: PopupMenu.PopupMenuItem;
     private settings?: Gio.Settings;
@@ -28,7 +29,7 @@ export default class ConnectionDot extends Extension {
         this.network = Gio.NetworkMonitor.get_default();
         this.session = new Soup.Session();
         this.button = new PanelMenu.Button(0, 'Connection Dot', false);
-        this.icon = new St.Icon({icon_name:'network-transmit-receive-symbolic',style_class:'system-status-icon'});
+        this.icon = new St.Widget({width:20,height:20,x_align:Clutter.ActorAlign.CENTER,y_align:Clutter.ActorAlign.CENTER,reactive:false});
         this.button.add_child(this.icon);
         this.detail = new PopupMenu.PopupMenuItem('Checking…', {reactive:false});
         (this.button.menu as PopupMenu.PopupMenu).addMenuItem(this.detail);
@@ -71,9 +72,8 @@ export default class ConnectionDot extends Extension {
     }
     private render(state: State, text:string) {
         if(!this.icon || !this.button || !this.detail) return;
-        const colors={connected:'#2ec27e',poor:'#e5a50a',offline:'#e01b24',portal:'#e5a50a',checking:'#9a9996'};
-        this.icon.style=`color: ${colors[state]};`;
-        this.icon.icon_name=state==='offline'?'network-offline-symbolic':state==='poor'||state==='portal'?'network-error-symbolic':'network-transmit-receive-symbolic';
+        const colors={connected:'#2ec27e',poor:'#e5a50a',offline:'#e01b24',portal:'#e5a50a',checking:'#3584e4'};
+        this.icon.style=`width: 20px; height: 20px; border-radius: 10px; background-color: ${colors[state]};`;
         this.button.accessible_name=`Connection Dot: ${labels[state]}`;
         this.detail.label.text=`${labels[state]}${text ? '\n'+text : ''}`;
     }
