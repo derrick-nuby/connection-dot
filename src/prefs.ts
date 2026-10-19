@@ -9,10 +9,16 @@ export default class Preferences extends ExtensionPreferences {
         const group=new Adw.PreferencesGroup({title:'Internet checks',description:'Contacts Mozilla and Fedora over HTTPS. Measures responsiveness, not download speed. Metered connections use at least 120 seconds.'});
         const enabled=new Adw.SwitchRow({title:'Active checks'});
         settings.bind('active-checks',enabled,'active',Gio.SettingsBindFlags.DEFAULT);group.add(enabled);
-        for(const [key,title,min,max] of [['interval','Check interval (seconds)',15,300],['slow-ms','Slow response threshold (ms)',250,4500]] as const) {
-            const row=new Adw.SpinRow({title,adjustment:new Gtk.Adjustment({lower:min,upper:max,step_increment:key==='interval'?15:250})});
+        for(const [key,title,min,max] of [['interval','Check interval (seconds)',15,300],['deadline','Request deadline (seconds)',2,10],['slow-ms','Slow response threshold (ms)',250,4500]] as const) {
+            const row=new Adw.SpinRow({title,adjustment:new Gtk.Adjustment({lower:min,upper:max,step_increment:key==='interval'?15:key==='deadline'?1:250})});
             settings.bind(key,row,'value',Gio.SettingsBindFlags.DEFAULT);group.add(row);
         }
+        for(const [key,title] of [['primary-url','Primary HTTPS URL'],['primary-response','Expected primary text'],['secondary-url','Fallback HTTPS URL'],['secondary-response','Expected fallback text']]) {
+            const row=new Adw.EntryRow({title});
+            settings.bind(key,row,'text',Gio.SettingsBindFlags.DEFAULT);group.add(row);
+        }
+        const reset=new Gtk.Button({label:'Reset defaults'});
+        reset.connect('clicked',()=>{for(const key of settings.settings_schema.list_keys()) settings.reset(key);});group.add(reset);
         page.add(group);window.add(page);
     }
 }

@@ -26,7 +26,7 @@ export default class ConnectionDot extends Extension {
     enable() {
         this.settings = this.getSettings();
         this.network = Gio.NetworkMonitor.get_default();
-        this.session = new Soup.Session({timeout:5});
+        this.session = new Soup.Session();
         this.button = new PanelMenu.Button(0, 'Connection Dot', false);
         this.icon = new St.Icon({icon_name:'network-transmit-receive-symbolic',style_class:'system-status-icon'});
         this.button.add_child(this.icon);
@@ -87,15 +87,27 @@ export default class ConnectionDot extends Extension {
             this.session!.send_async(message,GLib.PRIORITY_DEFAULT,cancel,(session,result)=>{
                 let stream:Gio.InputStream;
                 try { stream=session!.send_finish(result); } catch {resolve({ok:false,ms:0,reason:'Request failed'});return;}
-                stream.read_bytes_async(4097,GLib.PRIORITY_DEFAULT,cancel,(input,readResult)=>{
+                const chunks: Uint8Array[]=[];
+                let size=0;
+                const finish=(ok:boolean,reason:string)=>{
+                    stream.close_async(GLib.PRIORITY_DEFAULT,null,()=>{});
+                    resolve({ok,ms:Math.round((GLib.get_monotonic_time()-start)/1000),reason});
+                };
+                const read=()=>stream.read_bytes_async(Math.min(1024,4097-size),GLib.PRIORITY_DEFAULT,cancel,(input,readResult)=>{
                     try {
                         const bytes=input!.read_bytes_finish(readResult).get_data();
-                        const body=new TextDecoder().decode(bytes ?? new Uint8Array());
-                        const ok=message.status_code===200 && body.length<=4096 && body.trim()===expected;
-                        resolve({ok,ms:Math.round((GLib.get_monotonic_time()-start)/1000),reason:ok?'OK':'Unexpected response'});
-                    } catch {resolve({ok:false,ms:0,reason:'Read failed'});}
-                    finally {stream.close_async(GLib.PRIORITY_DEFAULT,null,()=>{});}
+                        if(bytes && bytes.length) {
+                            size+=bytes.length;
+                            if(size>4096) {finish(false,'Response too large');return;}
+                            chunks.push(bytes);read();return;
+                        }
+                        const data=new Uint8Array(size);let offset=0;
+                        for(const chunk of chunks) {data.set(chunk,offset);offset+=chunk.length;}
+                        const ok=message.status_code===200 && new TextDecoder().decode(data).trim()===expected;
+                        finish(ok,ok?'OK':'Unexpected response');
+                    } catch {finish(false,'Read failed');}
                 });
+                read();
             });
         });
     }
@@ -110,15 +122,15 @@ export default class ConnectionDot extends Extension {
             this.schedule(); return;
         }
         const cancel=new Gio.Cancellable(); this.pending=cancel;
-        this.deadline=GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT,5,()=>{this.deadline=0;cancel.cancel();return GLib.SOURCE_REMOVE;});
+        this.deadline=GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT,this.settings.get_int('deadline'),()=>{this.deadline=0;cancel.cancel();return GLib.SOURCE_REMOVE;});
         try {
             const results=await Promise.all([
-                this.probe('https://detectportal.firefox.com/success.txt','success',cancel),
-                this.probe('https://fedoraproject.org/static/hotspot.txt','OK',cancel),
+                this.probe(this.settings.get_string('primary-url'),this.settings.get_string('primary-response'),cancel),
+                this.probe(this.settings.get_string('secondary-url'),this.settings.get_string('secondary-response'),cancel),
             ]);
             if(this.pending!==cancel) return;
-            const state=this.classifier.update(results,this.networkState(),this.settings.get_int('slow-ms'));
-            this.render(state,results.map((r,i)=>`${i===0?'Mozilla':'Fedora'}: ${r.ok?r.ms+' ms':r.reason}`).join('\n')+'\nChecked '+new Date().toLocaleTimeString());
+            const state=this.classifier.update(results,this.networkState(),Math.min(this.settings.get_int('slow-ms'),this.settings.get_int('deadline')*1000-1));
+            this.render(state,results.map((r,i)=>`${i===0?'Primary':'Fallback'}: ${r.ok?r.ms+' ms':r.reason}`).join('\n')+'\nChecked '+new Date().toLocaleTimeString());
         } finally {
             if(this.pending===cancel && this.deadline) {GLib.Source.remove(this.deadline);this.deadline=0;}
             if(this.pending===cancel) {this.pending=undefined;this.schedule();}

@@ -12,6 +12,11 @@ schema='org.gnome.shell.extensions.'+name
 (stage/'metadata.json').write_text(json.dumps({'uuid':uuid,'name':'Connection Dot'+(' (Development)' if dev else ''),'description':'Internet responsiveness in the top bar. Periodically contacts Mozilla and Fedora; configurable in preferences.','shell-version':['48','49','50'],'url':'https://github.com/derrick-nuby/connection-dot','settings-schema':schema,'version-name':version},indent=2))
 (stage/'schemas').mkdir()
 (stage/'schemas'/f'{schema}.gschema.xml').write_text(f'''<schemalist><schema id="{schema}" path="/org/gnome/shell/extensions/{name}/">
+<key name="primary-url" type="s"><default>'https://detectportal.firefox.com/success.txt'</default><summary>Primary HTTPS endpoint</summary></key>
+<key name="primary-response" type="s"><default>'success'</default><summary>Expected primary response</summary></key>
+<key name="secondary-url" type="s"><default>'https://fedoraproject.org/static/hotspot.txt'</default><summary>Fallback HTTPS endpoint</summary></key>
+<key name="secondary-response" type="s"><default>'OK'</default><summary>Expected fallback response</summary></key>
+<key name="deadline" type="i"><range min="2" max="10"/><default>5</default><summary>Request deadline in seconds</summary></key>
 <key name="active-checks" type="b"><default>true</default><summary>Enable HTTPS connectivity checks</summary></key>
 <key name="interval" type="i"><range min="15" max="300"/><default>30</default><summary>Seconds between checks</summary></key>
 <key name="slow-ms" type="i"><range min="250" max="4500"/><default>1500</default><summary>Slow response threshold</summary></key>
