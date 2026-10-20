@@ -2,6 +2,9 @@ name: Release draft
 on:
   push:
     tags: ['v*']
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
@@ -16,9 +19,10 @@ jobs:
           node-version: '24'
           cache: npm
       - run: |
+          [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
           test "$GITHUB_REF_NAME" = "v$(node -p 'JSON.parse(require("fs").readFileSync("package.json")).version')"
           git merge-base --is-ancestor HEAD origin/main
-      - run: sudo apt-get update && sudo apt-get install -y gnome-shell libglib2.0-bin
+      - run: sudo apt-get update && sudo apt-get install -y gnome-shell gjs gir1.2-soup-3.0 libglib2.0-bin
       - run: npm ci && npm run check && npm test && npm run pack
       - run: git rev-parse HEAD > artifacts/commit.txt
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -40,10 +44,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          args=()
-          case "$GITHUB_REF_NAME" in *-*) args+=(--prerelease);; esac
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            echo 'Release already exists; refusing to replace assets.'
-            exit 1
+          if gh release view "$GITHUB_REF_NAME" --json isDraft >/dev/null 2>&1; then
+            test "$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft)" = true || {
+              echo 'Published releases are immutable.'; exit 1;
+            }
+            # Retrying a draft must not silently change an existing asset.
+            mkdir existing
+            gh release download "$GITHUB_REF_NAME" --dir existing
+            for file in artifacts/*; do
+              name=$(basename "$file")
+              if test -f "existing/$name"; then
+                cmp "$file" "existing/$name" || { echo "Asset differs: $name"; exit 1; }
+              else
+                gh release upload "$GITHUB_REF_NAME" "$file"
+              fi
+            done
+          else
+            gh release create "$GITHUB_REF_NAME" artifacts/* --verify-tag --draft --generate-notes \
+              --title "Connection Dot $GITHUB_REF_NAME"
           fi
-          gh release create "$GITHUB_REF_NAME" artifacts/* --verify-tag --draft --generate-notes "${args[@]}"

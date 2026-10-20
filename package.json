@@ -1,25 +1,25 @@
 {
   "name": "connection-dot",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Internet status in the GNOME top bar",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs",
-    "test": "tests"
-  },
   "scripts": {
-    "build": "tsc && python3 scripts/package.py",
-    "build:dev": "tsc --sourceMap && python3 scripts/package.py --dev",
+    "build": "npm run clean && tsc && python3 scripts/package.py",
+    "build:dev": "npm run clean && tsc --sourceMap && python3 scripts/package.py --dev",
     "check": "tsc --noEmit",
-    "test": "tsc && node --test tests/*.test.mjs",
+    "test": "tsc && node --test --test-isolation=none tests/*.test.mjs && gjs -m tests/endpoint.gjs.mjs",
     "pack": "npm run build",
     "verify:package": "python3 scripts/verify.py",
     "dev": "tsc --watch --sourceMap",
     "install:dev": "npm run build:dev && gnome-extensions install --force artifacts/connection-dot-dev.shell-extension.zip",
-    "uninstall:dev": "gnome-extensions uninstall connection-dot-dev@derrick-nuby.github.io"
+    "uninstall:dev": "gnome-extensions uninstall connection-dot-dev@derrick-nuby.github.io",
+    "clean": "node -e \"require('node:fs').rmSync('dist', {recursive:true, force:true})\"",
+    "install:prod": "npm run pack && gnome-extensions install --force artifacts/connection-dot.shell-extension.zip"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "gnome-shell-extension",
+    "internet",
+    "connectivity"
+  ],
   "license": "GPL-3.0-or-later",
   "type": "module",
   "private": true,
@@ -27,7 +27,7 @@
     "@girs/gjs": "^4.0.0-beta.34",
     "@girs/gnome-shell": "^48.0.4",
     "@girs/soup-3.0": "^5.5.0",
-    "@types/node": "^26.6.5",
+    "@types/node": "^24.0.0",
     "typescript": "^7.0.2"
   },
   "overrides": {
@@ -54,5 +54,12 @@
     "@girs/shew-0": "^0.0.0-4.0.0-beta.34",
     "@girs/st-16": "^16.0.0-4.0.0-beta.34",
     "@girs/upowerglib-1.0": "^0.99.1-4.0.0-beta.34"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/derrick-nuby/connection-dot.git"
+  },
+  "engines": {
+    "node": ">=24 <25"
   }
 }

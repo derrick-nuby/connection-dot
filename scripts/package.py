@@ -1,4 +1,4 @@
-import json, pathlib, shutil, subprocess, sys
+import json, pathlib, shutil, subprocess, sys, zipfile
 root=pathlib.Path(__file__).resolve().parent.parent
 dev='--dev' in sys.argv
 name='connection-dot'+('-dev' if dev else '')
@@ -24,6 +24,16 @@ schema='org.gnome.shell.extensions.'+name
 shutil.copy(root/'LICENSE',stage/'LICENSE')
 subprocess.run(['glib-compile-schemas','--strict',str(stage/'schemas')],check=True)
 out=root/'artifacts';out.mkdir(exist_ok=True)
-subprocess.run(['gnome-extensions','pack',str(stage),'--force','--out-dir',str(out),'--extra-source=status.js','--extra-source=LICENSE'],check=True)
+subprocess.run(['gnome-extensions','pack',str(stage),'--force','--out-dir',str(out),*[f'--extra-source={p.name}' for p in sorted(stage.glob('*.js')) if p.name not in ('extension.js','prefs.js')],'--extra-source=LICENSE'],check=True)
 shutil.move(out/f'{uuid}.shell-extension.zip',out/f'{name}.shell-extension.zip')
+# Normalize timestamps and ordering so retries produce identical release assets.
+archive=out/f'{name}.shell-extension.zip'
+with zipfile.ZipFile(archive) as z:
+    entries={name:z.read(name) for name in z.namelist()}
+with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED) as z:
+    for entry,data in sorted(entries.items()):
+        info=zipfile.ZipInfo(entry,date_time=(1980,1,1,0,0,0))
+        info.compress_type=zipfile.ZIP_DEFLATED
+        info.external_attr=(0o40755 if entry.endswith('/') else 0o100644)<<16
+        z.writestr(info,data)
 subprocess.run([sys.executable,str(root/'scripts/verify.py'),str(out/f'{name}.shell-extension.zip')],check=True)
