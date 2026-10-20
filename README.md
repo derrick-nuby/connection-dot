@@ -2,17 +2,15 @@
 
 A prominent **20-pixel status dot** in the GNOME top bar that shows whether your internet connection is responsive, slow, or offline. Click it for response times, the most recent check, and settings.
 
-**Development preview · version 0.1.0 · GPL-3.0-or-later**
+**Internet status at a glance.**
 
-The extension declares GNOME Shell **48, 49, and 50** compatibility. It has been tried locally on Ubuntu 26.04.1 / GNOME 50.1 / Wayland; the complete three-version desktop test matrix is still pending. It is not yet published on extensions.gnome.org.
+Targets GNOME Shell **48, 49, and 50**. Local validation uses GNOME 50.1 on Ubuntu 26.04.1; GNOME 48 and 49 are not yet verified. Connection Dot is not currently listed on extensions.gnome.org.
 
 ## Screenshots
 
-Actual screenshots of the development build, cropped without altering their content.
+Connection details, cropped from the original screenshot without altering its content.
 
-| Connection details | Preferences |
-| --- | --- |
-| <img src="assets/screenshots/status-menu.png" alt="Connection Dot menu showing Connected, response times for both endpoints, the last check, Check now, Settings, and About" width="224"> | <img src="assets/screenshots/preferences.png" alt="Connection Dot preferences showing active checks, interval, deadline, slow threshold, editable endpoints, and reset defaults" width="410"> |
+<img src="assets/screenshots/status-menu.png" alt="Connection Dot menu showing Connected, response times, the last check, Check now, Settings, and About" width="224">
 
 ## What the colors mean
 
@@ -52,57 +50,42 @@ sudo apt update
 sudo apt install gnome-shell gjs libglib2.0-bin gir1.2-soup-3.0 gir1.2-gtk-4.0 gir1.2-adw-1 python3
 ```
 
-## Quick start: build, test, and try locally
+## Install
 
-Run these in your checkout's root directory:
+When a stable release is available, download `connection-dot.shell-extension.zip` and its `.sha256` file from [GitHub Releases](https://github.com/derrick-nuby/connection-dot/releases). From the download directory:
 
 ```bash
-npm ci
-npm run check
-npm test
-npm run install:dev
+sha256sum -c connection-dot.shell-extension.zip.sha256
+gnome-extensions install --force connection-dot.shell-extension.zip
 ```
-
-`install:dev` builds and installs the development ZIP. Do **not** run npm or the extension installation with sudo.
 
 Save your work, **log out of GNOME and back in**, then enable it:
-
-```bash
-gnome-extensions enable connection-dot-dev@derrick-nuby.github.io
-gnome-extensions info connection-dot-dev@derrick-nuby.github.io
-```
-
-Look for **State: ACTIVE** and a dot on the right of the top bar. With the default interval, allow about 30–45 seconds for two successful checks to establish green; a metered network takes longer.
-
-Open preferences through the dot's menu or:
-
-```bash
-gnome-extensions prefs connection-dot-dev@derrick-nuby.github.io
-```
-
-## Build and install the production package
-
-```bash
-npm run pack
-npm run verify:package
-(cd artifacts && sha256sum -c connection-dot.shell-extension.zip.sha256)
-gnome-extensions install --force artifacts/connection-dot.shell-extension.zip
-```
-
-Then log out and back in, and enable:
 
 ```bash
 gnome-extensions enable connection-dot@derrick-nuby.github.io
 gnome-extensions info connection-dot@derrick-nuby.github.io
 ```
 
-Disable the development version first if it is enabled, to avoid two dots and duplicate network checks:
+Look for **State: ACTIVE** and the dot on the right of the top bar. Allow about 30–45 seconds for two successful checks to establish green; metered networks take longer. Open preferences from the dot's menu or run:
 
 ```bash
-gnome-extensions disable connection-dot-dev@derrick-nuby.github.io
+gnome-extensions prefs connection-dot@derrick-nuby.github.io
 ```
 
-The ZIP and checksum are in `artifacts/`. Verify a downloaded release checksum from the directory containing both files before installation. An official GNOME listing link will be added once the extension is accepted; the repository's configured GitHub URL is not evidence that a release has been published.
+Installation is per-user. Do not run these commands with sudo. A GNOME Extensions installation link will be added after acceptance.
+
+### Build from source
+
+With the build requirements installed, run these commands in the repository:
+
+```bash
+npm ci
+npm run check
+npm test
+npm run install:prod
+```
+
+Then log out/back in and enable the production UUID as above. `npm run pack` builds without installing. ZIPs and checksums are written to `artifacts/`.
 
 ## Preferences
 
@@ -131,53 +114,35 @@ The open panel menu uses GNOME's standard menu focus. Press **Escape** or click 
 
 ## Update, disable, remove, or roll back
 
-For development updates:
+Install the newer production ZIP using the installation commands above, then log out/back in to load the updated JavaScript. Ordinary upgrades preserve settings. Disable/enable alone may reuse cached code.
 
 ```bash
-npm run check
-npm test
-npm run install:dev
-```
-
-Log out and back in to load the updated JavaScript. `npm run dev` only watches and compiles; it does not install or reload the extension. GNOME 50's live reload method is unsupported, and disable/enable alone may reuse cached code.
-
-To disable without removing settings:
-
-```bash
-gnome-extensions disable connection-dot-dev@derrick-nuby.github.io
-# Or, for production:
+# Disable without removing settings:
 gnome-extensions disable connection-dot@derrick-nuby.github.io
-```
-
-To remove the development build:
-
-```bash
-npm run uninstall:dev
-```
-
-To remove production:
-
-```bash
+# Uninstall:
 gnome-extensions uninstall connection-dot@derrick-nuby.github.io
 ```
 
-To roll back, install an earlier trusted ZIP for the **same UUID** using `gnome-extensions install --force`, then log out and back in. Ordinary upgrades preserve settings. Development and production installations live in separate directories under `~/.local/share/gnome-shell/extensions/`.
+To roll back, install an earlier trusted ZIP for the same UUID with `gnome-extensions install --force`, then log out/back in.
 
-## Development commands
+## Contributing: development builds
 
 | Command | Purpose |
 | --- | --- |
 | `npm ci` | Install the committed dependency versions |
 | `npm run check` | Strict TypeScript checking |
-| `npm test` | Compile and run five status-classification tests |
+| `npm test` | Run classifier, controller/probe, and GLib URI tests |
 | `npm run dev` | Watch TypeScript with source maps; no automatic installation |
 | `npm run build:dev` | Build and verify the development ZIP |
 | `npm run build` / `npm run pack` | Build and verify the production ZIP |
 | `npm run verify:package` | Inspect production archive structure and generate its checksum |
+| `npm run install:prod` | Build and install the production ZIP |
 | `npm run install:dev` | Build and install the development ZIP |
 | `npm run uninstall:dev` | Remove the development installation |
 
-Production packages contain readable JavaScript, metadata, schema XML/compiled schemas, and the license. They exclude screenshots, tests, dependencies, and TypeScript source. Source maps are compiler output for development; the ZIP packer includes only its explicitly selected runtime files.
+Production packages contain readable JavaScript, metadata, schema XML (compiled during installation), and the license. They exclude screenshots, tests, dependencies, and TypeScript source. Source maps are compiler output for development; the ZIP packer includes only its explicitly selected runtime files.
+
+Development builds use the separate UUID `connection-dot-dev@derrick-nuby.github.io` and separate settings. Run `npm run install:dev`, log out/back in, then enable that UUID. Disable production while testing to avoid duplicate dots and network checks. `npm run dev` watches compilation only; it does not install or reload JavaScript.
 
 Keep Shell widgets and GTK preferences in separate modules. Initialize live resources on enable, cancel requests and remove timers on disable, and finish asynchronous operations explicitly. Use `npm ci` in automation and commit dependency changes with the lockfile.
 
@@ -194,30 +159,22 @@ Run only the command matching the installed Shell version. See the [GNOME develo
 
 ## Testing and compatibility
 
-Automated tests cover two-check green establishment, a failed provider with another successful provider, slow responses and recovery, offline corroboration, captive portals, missing routes, and resetting old evidence. Type checking and package validation do not prove desktop compatibility.
+Automated tests cover status transitions, threshold boundaries, provider failures, cancellation, deadline expiry, stale results, recovery after unexpected errors, response limits, redirects, and HTTPS URL validation. Controller tests use deterministic substitutes for GNOME interfaces; URL tests run the actual GLib parser through GJS.
 
-Before a stable release, test the exact downloaded ZIP on GNOME 48, 49, and 50 and record its SHA-256 along with the OS, Shell version, and results:
-
-- Installation, preferences, menu navigation, disabling, and removal.
-- Wi-Fi/Ethernet changes, router-without-internet, VPN, captive portals, blocked endpoints, and recovery.
-- Repeated enable/disable, lock/unlock, suspend/resume, and settings-preserving upgrades.
-- Keyboard focus, screen-reader labels, high contrast, and display scaling.
-- A 30-minute session without extension exceptions, duplicate dots, unexpected requests, or unbounded resource growth.
-
-Full GJS fixture integration tests and the complete desktop qualification matrix remain outstanding. Do not treat the declared compatibility list as proof that every distribution/session combination has been tested.
+Desktop compatibility also depends on the GNOME version and session. The declared Shell versions are 48–50; local GNOME 50 checks do not establish compatibility on 48 or 49. Release qualification includes connectivity changes, preferences, lifecycle cleanup, suspend/resume, keyboard focus, accessibility, and settings-preserving upgrades.
 
 ## CI and releases
 
-Pushes and pull requests run TypeScript checks, classification tests, both builds, and archive validation. GitHub Actions retains build artifacts for 14 days. Workflows use pinned action revisions and read-only permissions except for the release publication job.
+Pushes and pull requests run TypeScript checks, runtime tests, both builds, and archive validation. GitHub Actions retains build artifacts for 14 days. Workflows use pinned action revisions and read-only permissions except for the release publication job.
 
 A `vVERSION` tag matching `package.json` and pointing to a commit on `main` triggers:
 
 1. Checks, tests, and production packaging.
 2. A ZIP, its SHA-256 file, and a source-commit file.
 3. Categorized, automatically generated notes from merged pull requests.
-4. A **draft** GitHub Release. Tags containing a prerelease suffix create prerelease drafts.
+4. A **draft** GitHub Release. Only stable semantic-version tags are accepted.
 
-The workflow refuses to replace an existing release. Review the notes and add supported versions, known limitations, installation instructions, and GNOME submission status. Test the exact attached ZIP before publishing. Never overwrite published assets or move a published tag; publish a new version for fixes.
+Retries resume an existing draft only when its existing assets match exactly. Published releases cannot be overwritten. Review the notes and add supported versions, known limitations, installation instructions, and GNOME submission status. Test the exact attached ZIP before publishing. Never overwrite published assets or move a published tag; publish a new version for fixes.
 
 After maintainer review and desktop qualification, manually upload the same ZIP to [extensions.gnome.org](https://extensions.gnome.org/upload/). GitHub publication and GNOME acceptance are separate. No GNOME password is stored in CI. Mark a submission as pending until the listing is verified active.
 
@@ -230,7 +187,7 @@ GNOME may not have discovered the new directory. Save your work and log out/back
 ```bash
 ls ~/.local/share/gnome-shell/extensions/
 gnome-extensions list
-gnome-extensions info connection-dot-dev@derrick-nuby.github.io
+gnome-extensions info connection-dot@derrick-nuby.github.io
 ```
 
 **No dot, error state, or unexpected behavior**
@@ -239,7 +196,7 @@ gnome-extensions info connection-dot-dev@derrick-nuby.github.io
 gdbus call --session --dest org.gnome.Shell.Extensions \
   --object-path /org/gnome/Shell/Extensions \
   --method org.gnome.Shell.Extensions.GetExtensionErrors \
-  connection-dot-dev@derrick-nuby.github.io
+  connection-dot@derrick-nuby.github.io
 journalctl -b /usr/bin/gnome-shell --since '10 minutes ago' --no-pager
 ```
 
