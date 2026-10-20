@@ -7,3 +7,7 @@ test('slow checks produce poor and two fast checks recover',()=>{const c=new Cla
 test('offline requires corroboration',()=>{const c=new Classifier();for(let i=0;i<3;i++)c.update([fail],'full',1500);assert.equal(c.state,'checking');assert.equal(c.update([fail],'limited',1500),'offline');});
 test('portal and missing route override probe success',()=>{const c=new Classifier();assert.equal(c.update([fast],'portal',1500),'portal');assert.equal(c.update([fast],'none',1500),'offline');});
 test('reset drops old evidence',()=>{const c=new Classifier();c.update([fast],'full',1500);c.reset();assert.equal(c.update([fast],'full',1500),'checking');});
+test('threshold is inclusive for slow responses',()=>{const c=new Classifier();const boundary={...fast,ms:1500};c.update([boundary],'full',1500);assert.equal(c.update([boundary],'full',1500),'poor');});
+test('fastest successful provider determines responsiveness',()=>{const c=new Classifier();c.update([slow,fast],'limited',1500);assert.equal(c.update([slow,fast],'limited',1500),'connected');});
+test('interrupted recovery requires consecutive successes',()=>{const c=new Classifier();c.update([fast],'full',1500);c.update([fail],'full',1500);assert.equal(c.update([fast],'full',1500),'poor');assert.equal(c.update([fast],'full',1500),'connected');});
+test('portal clears previous success evidence',()=>{const c=new Classifier();c.update([fast],'full',1500);c.update([fast],'portal',1500);assert.equal(c.update([fast],'full',1500),'portal');assert.equal(c.update([fast],'full',1500),'connected');});

@@ -7,6 +7,7 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import {validEndpoint} from './endpoint.js';
 import {Classifier, type Network, type Result, type State} from './status.js';
 
 const labels: Record<State,string> = {checking:'Checking / unable to verify',connected:'Connected',poor:'Poor connection',offline:'Offline',portal:'Sign-in required'};
@@ -22,6 +23,7 @@ export default class ConnectionDot extends Extension {
     private deadline = 0;
     private signal = 0;
     private settingSignal = 0;
+    private sleepSignal = 0;
     private pending?: Gio.Cancellable;
     private preferencesRequest?: Gio.Cancellable;
     private classifier = new Classifier();
@@ -42,10 +44,19 @@ export default class ConnectionDot extends Extension {
         Main.panel.addToStatusArea(this.uuid,this.button);
         this.signal = this.network.connect('network-changed',()=>this.restart());
         this.settingSignal = this.settings.connect('changed',()=>this.restart());
+        this.sleepSignal=Gio.DBus.system.signal_subscribe(
+            'org.freedesktop.login1','org.freedesktop.login1.Manager','PrepareForSleep',
+            '/org/freedesktop/login1',null,Gio.DBusSignalFlags.NONE,
+            (_connection,_sender,_path,_interface,_signal,parameters)=>{
+                const [sleeping]=parameters.deepUnpack() as [boolean];
+                if(sleeping) this.stop(); else this.restart();
+            });
         this.restart();
     }
     disable() {
         this.stop();
+        if(this.sleepSignal) Gio.DBus.system.signal_unsubscribe(this.sleepSignal);
+        this.sleepSignal=0;
         this.preferencesRequest?.cancel(); this.preferencesRequest=undefined;
         if(this.network && this.signal) this.network.disconnect(this.signal);
         if(this.settings && this.settingSignal) this.settings.disconnect(this.settingSignal);
@@ -91,6 +102,7 @@ export default class ConnectionDot extends Extension {
         if(!this.network?.network_available) return 'none';
         switch(this.network.connectivity) {
             case Gio.NetworkConnectivity.PORTAL:return 'portal';
+            case Gio.NetworkConnectivity.LOCAL:
             case Gio.NetworkConnectivity.LIMITED:return 'limited';
             case Gio.NetworkConnectivity.FULL:return 'full';
             default:return 'unknown';
@@ -106,7 +118,7 @@ export default class ConnectionDot extends Extension {
     private probe(url:string, expected:string, cancel:Gio.Cancellable): Promise<Result> {
         const start=GLib.get_monotonic_time();
         return new Promise(resolve=>{
-            if(!/^https:\/\/[^/@]+(?:\/|$)/.test(url)) {resolve({ok:false,ms:0,reason:'Invalid HTTPS endpoint'});return;}
+            if(!validEndpoint(url)) {resolve({ok:false,ms:0,reason:'Invalid HTTPS endpoint'});return;}
             const message=Soup.Message.new('GET',url);
             if(!message) {resolve({ok:false,ms:0,reason:'Invalid endpoint'});return;}
             message.set_flags(Soup.MessageFlags.NO_REDIRECT);
@@ -116,7 +128,9 @@ export default class ConnectionDot extends Extension {
                 const chunks: Uint8Array[]=[];
                 let size=0;
                 const finish=(ok:boolean,reason:string)=>{
-                    stream.close_async(GLib.PRIORITY_DEFAULT,null,()=>{});
+                    stream.close_async(GLib.PRIORITY_DEFAULT,null,(source,result)=>{
+                        try { source!.close_finish(result); } catch { /* Closing cannot change the probe result. */ }
+                    });
                     resolve({ok,ms:Math.round((GLib.get_monotonic_time()-start)/1000),reason});
                 };
                 const read=()=>stream.read_bytes_async(Math.min(1024,4097-size),GLib.PRIORITY_DEFAULT,cancel,(input,readResult)=>{
@@ -157,6 +171,11 @@ export default class ConnectionDot extends Extension {
             if(this.pending!==cancel) return;
             const state=this.classifier.update(results,this.networkState(),Math.min(this.settings.get_int('slow-ms'),this.settings.get_int('deadline')*1000-1));
             this.render(state,results.map((r,i)=>`${i===0?'Primary':'Fallback'}: ${r.ok?r.ms+' ms':r.reason}`).join('\n')+'\nChecked '+new Date().toLocaleTimeString());
+        } catch(error) {
+            if(this.pending===cancel) {
+                this.render('checking','Unable to complete check; retrying automatically');
+                console.error('Connection Dot: check failed:',error);
+            }
         } finally {
             if(this.pending===cancel && this.deadline) {GLib.Source.remove(this.deadline);this.deadline=0;}
             if(this.pending===cancel) {this.pending=undefined;this.schedule();}
